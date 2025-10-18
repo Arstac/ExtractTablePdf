@@ -10,12 +10,15 @@ Professional PDF table extraction tool with multi-page support, automatic column
 - Handle empty cells and continuation rows
 - Export to CSV and Excel formats
 - Visual debugging and verification tools
+- **REST API with FastAPI** for easy integration
+- Temporary file management for production use
 
 ## Project Structure
 
 ```
 ExtractTablePdf/
-├── main.py                 # Main entry point (run this!)
+├── main.py                 # Main entry point (CLI)
+├── app.py                  # FastAPI REST API server
 ├── requirements.txt        # Python dependencies
 ├── README.md              # This file
 │
@@ -33,6 +36,7 @@ ExtractTablePdf/
 │   └── table_data.xlsx    # Extracted data (Excel)
 │
 ├── docs/                  # Documentation
+│   ├── API.md             # REST API documentation
 │   ├── RUN_FULL_PROCESS.md
 │   ├── USAGE.md
 │   └── VISUALIZACIONES.md
@@ -47,7 +51,8 @@ ExtractTablePdf/
 │   └── visualize_columns.py
 │
 └── examples/              # Example scripts
-    └── example_usage.py
+    ├── example_usage.py
+    └── test_api.py        # API test script
 ```
 
 ## Installation
@@ -77,6 +82,28 @@ sudo apt-get install tesseract-ocr-cat tesseract-ocr-spa
 Download from: https://github.com/UB-Mannheim/tesseract/wiki
 
 ## Quick Start
+
+### Option 1: REST API (Recommended for Integration)
+
+1. Start the API server:
+```bash
+python app.py
+```
+
+2. Upload a PDF and get JSON results:
+```bash
+curl -X POST "http://localhost:8000/extract" \
+  -F "file=@data/documento.pdf" \
+  | jq .
+```
+
+3. Access interactive documentation:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+See [docs/API.md](docs/API.md) for complete API documentation.
+
+### Option 2: Command Line Interface
 
 1. Place your PDF file in the `data/` directory:
 ```bash

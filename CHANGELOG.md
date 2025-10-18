@@ -1,5 +1,53 @@
 # Changelog
 
+## [1.1.0] - 2025-10-18
+
+### REST API con FastAPI
+
+#### Added
+- **app.py**: REST API con FastAPI para integración fácil
+  - Endpoint `POST /extract` para subir PDF y obtener datos en JSON
+  - Endpoint `POST /extract/simple` que devuelve solo el array de datos
+  - Endpoint `GET /health` para health check
+  - Parámetro `temp` para gestión automática de archivos temporales
+  - Documentación interactiva automática (Swagger UI y ReDoc)
+  - Logging completo de operaciones
+  - Manejo robusto de errores con HTTP status codes apropiados
+  - CORS middleware configurado
+- **docs/API.md**: Documentación completa de la API REST
+  - Ejemplos con curl, Python y JavaScript
+  - Guía de despliegue en producción
+  - Configuración de Docker
+  - Cliente Python de ejemplo
+- **examples/test_api.py**: Script de prueba para la API
+  - Health check automático
+  - Carga y procesamiento de PDF
+  - Guardado de resultados en JSON
+- **requirements.txt**: Actualizadas dependencias con FastAPI
+  - `fastapi==0.104.1`
+  - `uvicorn[standard]==0.24.0`
+  - `python-multipart==0.0.6`
+
+#### Changed
+- **README.md**: Añadida sección de Quick Start con la API REST
+- Estructura del proyecto actualizada para incluir `app.py`
+
+#### Features
+- **Gestión de archivos temporales**:
+  - `temp=true`: Los archivos se borran automáticamente después de procesar
+  - `temp=false`: Los archivos se guardan en `output/{session_id}/` para debugging
+- **Respuesta JSON estructurada**:
+  - `success`: Indicador de éxito
+  - `count`: Número de registros extraídos
+  - `data`: Array de diccionarios con los datos
+  - `session_id`: UUID de la sesión (solo si temp=false)
+- **Validaciones**:
+  - Validación de tipo de archivo (solo PDF)
+  - Validación de datos extraídos
+  - Manejo de errores con mensajes claros
+
+---
+
 ## [1.0.0] - 2025-10-18
 
 ### Reestructuración Profesional del Proyecto

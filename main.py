@@ -14,8 +14,8 @@ from pathlib import Path
 # Add src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from extract_section import PDFSectionExtractor
-from process_table import TableProcessor
+from src.extract_section import PDFSectionExtractor
+from src.process_table import TableProcessor
 
 
 def main():
