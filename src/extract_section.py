@@ -328,12 +328,17 @@ class PDFSectionExtractor:
 
 def main():
     # Configuración
-    pdf_path = "documento.pdf"
-    output_dir = "output_sections"
+    # Buscar el PDF en data/ o en la raíz
+    pdf_path = "data/documento.pdf"
+    if not os.path.exists(pdf_path):
+        pdf_path = "documento.pdf"
+
+    output_dir = "output/sections"
 
     # Verificar que existe el PDF
     if not os.path.exists(pdf_path):
         print(f"Error: No se encuentra el archivo '{pdf_path}'")
+        print("Por favor, coloca el PDF en la carpeta 'data/' o en la raíz del proyecto")
         return
 
     # Crear el extractor y procesar

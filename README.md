@@ -1,142 +1,261 @@
-Quiero que busques la mejor forma de extraer una tabla de un pdf, la cual esta dividida en unas cuantas paginas, y tiene campos vacios en algunos casos. El pdf tiene encabezado y pie de pagina que cortara la tabla en su lectura. Quiero la mejor forma profesional para realizarlo.Buscaré información actualizada sobre las mejores prácticas profesionales para extraer tablas complejas de PDFs.mejores herramientas extraer tablas PDF multipágina Python 202410 resultados¿Cómo extraer tablas de un PDF en Python?wondershare.es11 mejores tablas de extracción de PDF Herramientas (2024) [GRATIS]datanumen.comExtraer tabla de PDF en Python (Tutorial para desarrolladores) | IronPDF for Pythonironpdf.comUna increíble biblioteca de Python para extraer datos tabulares de archivos PDF | Datapeakerdatapeaker.comExtraer tabla de PDF en Python | Leer datos tabulares en PDFaspose.comAnálisis sintáctico de PDF y otros formatos de datos en Pythonkonfuzio.comExtraer tablas de un PDF usando Python | Aspose.PDFaspose.com5 formas de extraer tablas de PDF sin perder formato | UPDFupdf.com¿Tablas con datos en PDF? No problem, Python ... - Mediummedium.comCómo extraer datos de archivos PDF en Pythonlinkedin.comCamelot Python library table extraction multipage headers footers10 resultadosCamelot: PDF Table Extraction for Humans — Camelot 1.0.9 documentationreadthedocs.ioQuickstart — Camelot 1.0.9 documentationreadthedocs.ioExtracting tabular data from PDFs made easy with Camelot. | Towards Data Sciencetowardsdatascience.comCamelot Documentation Release 1.0.9 Vinayak Mehta Aug 11, 2025readthedocs.orgCamelot - An Amazing Python Library to Extract Tabular Data from PDFsanalyticsvidhya.comUse Your Data: Scraping PDFs. Scraping data from PDFs, cleaning and… | by oranyeli samuel | Analytics Vidhya | Mediummedium.compython - tabula vs camelot for table extraction from PDF - Stack Overflowstackoverflow.comComparison with other PDF Table Extraction libraries and tools · camelot-dev/camelot Wiki · GitHubgithub.comGitHub - atlanhq/camelot: Camelot: PDF Table Extraction for Humansgithub.comGitHub - virtualarchitectures/Camelot_PDF_Table_Extraction: Jupyter notebook for extracting tables from PDF documents using Camelotgithub.comBasándome en la investigación profesional actual, te presento la mejor solución para extraer tablas complejas de PDFs multipágina:
-Solución Recomendada: Camelot con preprocesamiento
-Camelot es una biblioteca de Python profesional diseñada específicamente para la extracción de tablas de PDFs que ofrece control completo sobre el proceso de extracción ReadthedocsTowards Data Science. Para tu caso específico con tablas divididas en múltiples páginas, encabezados/pies de página, y campos vacíos, aquí está la estrategia óptima:
-1. Pipeline Profesional Recomendado
-pythonimport camelot
-import pandas as pd
-from PyPDF2 import PdfReader, PdfWriter
-import os
+# ExtractTablePdf
 
-def extract_complex_tables(pdf_path, pages='all'):
-    """
-    Extrae tablas complejas de PDFs multipágina con encabezados/pies
-    """
-    
-    # PASO 1: Configuración avanzada de Camelot
-    # Para tablas con líneas visibles (más común y preciso)
-    tables = camelot.read_pdf(
-        pdf_path,
-        pages=pages,
-        flavor='lattice',  # Usa 'stream' si no hay líneas visibles
-        strip_text='\n',   # Limpia saltos de línea
-        line_scale=40,     # Ajusta detección de líneas
-        split_text=True    # Divide texto largo en celdas
-    )
-    
-    # PASO 2: Filtrar tablas por calidad
-    good_tables = []
-    for table in tables:
-        # Descartar tablas mal extraídas usando métricas
-        if table.parsing_report['accuracy'] > 80:
-            good_tables.append(table)
-    
-    # PASO 3: Concatenar tablas multipágina
-    if len(good_tables) > 1:
-        # Asume que tablas consecutivas son la misma tabla dividida
-        dfs = [table.df for table in good_tables]
-        combined_df = pd.concat(dfs, ignore_index=True)
-    else:
-        combined_df = good_tables[0].df
-    
-    # PASO 4: Limpiar encabezados repetidos
-    combined_df = remove_header_footers(combined_df)
-    
-    return combined_df
+Professional PDF table extraction tool with multi-page support, automatic column detection, and OCR processing.
 
-def remove_header_footers(df):
-    """
-    Elimina filas de encabezado/pie repetidas
-    """
-    # Identifica y elimina filas duplicadas (encabezados repetidos)
-    first_row = df.iloc[0].values
-    mask = df.apply(lambda row: not all(row == first_row), axis=1)
-    df_clean = df[mask].reset_index(drop=True)
-    
-    # Maneja campos vacíos
-    df_clean = df_clean.replace('', pd.NA)
-    
-    return df_clean
-2. Configuración Avanzada para Casos Difíciles
-Camelot ofrece dos métodos principales: Lattice para tablas con líneas visibles y Stream para tablas basadas en espacios en blanco ReadthedocsReadthedocs. Para tu caso:
-python# Para tablas CON líneas divisorias (RECOMENDADO)
-tables = camelot.read_pdf(
-    'archivo.pdf',
-    pages='1-10',        # Especifica rango de páginas
-    flavor='lattice',
-    table_areas=['10,570,590,30'],  # Define área exacta de tabla [x1,y1,x2,y2]
-    columns=['100,200,300,400'],    # Define separadores de columnas
-    edge_tol=50,                    # Tolerancia para detectar bordes
-    row_tol=2                       # Tolerancia para detectar filas
+## Features
+
+- Extract tables from multi-page PDFs
+- Automatic header and footer removal
+- Smart column detection using OCR
+- Handle empty cells and continuation rows
+- Export to CSV and Excel formats
+- Visual debugging and verification tools
+
+## Project Structure
+
+```
+ExtractTablePdf/
+├── main.py                 # Main entry point (run this!)
+├── requirements.txt        # Python dependencies
+├── README.md              # This file
+│
+├── src/                   # Source code
+│   ├── __init__.py
+│   ├── extract_section.py # PDF section extraction
+│   └── process_table.py   # Table processing and OCR
+│
+├── data/                  # Input data
+│   └── documento.pdf      # Your PDF file goes here
+│
+├── output/                # Generated output
+│   ├── sections/          # Extracted images
+│   ├── table_data.csv     # Extracted data (CSV)
+│   └── table_data.xlsx    # Extracted data (Excel)
+│
+├── docs/                  # Documentation
+│   ├── RUN_FULL_PROCESS.md
+│   ├── USAGE.md
+│   └── VISUALIZACIONES.md
+│
+├── tests/                 # Test scripts
+│   ├── test_column_detection.py
+│   └── test_single_page.py
+│
+├── tools/                 # Debug and utility scripts
+│   ├── debug_colors.py
+│   ├── debug_single_file.py
+│   └── visualize_columns.py
+│
+└── examples/              # Example scripts
+    └── example_usage.py
+```
+
+## Installation
+
+1. Clone or download this repository
+
+2. Install Python dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Install Tesseract OCR (required for text extraction):
+
+**macOS:**
+```bash
+brew install tesseract
+brew install tesseract-lang  # For Catalan/Spanish support
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install tesseract-ocr
+sudo apt-get install tesseract-ocr-cat tesseract-ocr-spa
+```
+
+**Windows:**
+Download from: https://github.com/UB-Mannheim/tesseract/wiki
+
+## Quick Start
+
+1. Place your PDF file in the `data/` directory:
+```bash
+cp your_document.pdf data/documento.pdf
+```
+
+2. Run the complete pipeline:
+```bash
+python main.py
+```
+
+That's it! The script will:
+- Extract sections from the PDF
+- Detect table columns automatically
+- Extract text using OCR
+- Generate CSV and Excel files in `output/`
+
+## Manual Execution (Step by Step)
+
+If you want to run each step separately:
+
+### Step 1: Extract sections from PDF
+```bash
+python src/extract_section.py
+```
+
+This generates section images in `output/sections/`
+
+### Step 2: Process table and generate output
+```bash
+python src/process_table.py
+```
+
+This processes the sections and generates:
+- `output/table_data.csv` - Data in CSV format
+- `output/table_data.xlsx` - Data in Excel format
+- Debug images in `output/sections/debug_*/`
+
+## Configuration
+
+### Custom PDF Path
+
+Edit [main.py](main.py:24-26) or [src/extract_section.py](src/extract_section.py:332-334):
+
+```python
+pdf_path = "data/your_custom_file.pdf"
+```
+
+### Output Directories
+
+Edit [main.py](main.py:27-28):
+
+```python
+sections_output_dir = "output/sections"
+table_output_file = "output/table_data.csv"
+```
+
+### Disable Visualizations
+
+Edit [main.py](main.py:76) or [src/process_table.py](src/process_table.py:972):
+
+```python
+processor = TableProcessor(
+    sections_dir="output/sections",
+    output_file="output/table_data.csv",
+    generate_visualizations=False  # Set to False
 )
+```
 
-# Para tablas SIN líneas (solo espacios)
-tables = camelot.read_pdf(
-    'archivo.pdf',
-    flavor='stream',
-    edge_tol=100,        # Mejora detección de área
-    row_tol=10,          # Agrupa filas cercanas
-    column_tol=10        # Agrupa columnas cercanas
-)
-3. Preprocesamiento del PDF (Para Casos Extremos)
-Si los encabezados/pies interfieren mucho:
-pythonfrom PyPDF2 import PdfReader, PdfWriter
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+## Testing
 
-def crop_pdf_margins(input_pdf, output_pdf, margins):
-    """
-    Recorta márgenes del PDF para eliminar encabezados/pies
-    margins: (top, bottom, left, right) en puntos
-    """
-    reader = PdfReader(input_pdf)
-    writer = PdfWriter()
-    
-    for page in reader.pages:
-        # Obtiene dimensiones originales
-        mediabox = page.mediabox
-        
-        # Aplica recorte
-        page.mediabox.lower_left = (
-            mediabox.left + margins[2],
-            mediabox.bottom + margins[1]
-        )
-        page.mediabox.upper_right = (
-            mediabox.right - margins[3],
-            mediabox.top - margins[0]
-        )
-        
-        writer.add_page(page)
-    
-    with open(output_pdf, 'wb') as f:
-        writer.write(f)
+### Test column detection on a single page:
+```bash
+python tests/test_single_page.py
+```
 
-# Uso:
-crop_pdf_margins('original.pdf', 'cropped.pdf', margins=(50, 50, 30, 30))
-tables = camelot.read_pdf('cropped.pdf')
-4. Alternativas y Herramientas Complementarias
-Para proyectos empresariales grandes, considera soluciones basadas en IA como Docsumo que manejan automáticamente PDFs complejos con múltiples tablas 11 mejores tablas de extracción de PDF Herramientas (2024) [GRATIS].
-Instalación completa:
-bash# Dependencias del sistema (Ubuntu/Debian)
-sudo apt-get install python3-tk ghostscript
+### Test with full dataset:
+```bash
+python tests/test_column_detection.py
+```
 
-# Instalación de Camelot
-pip install "camelot-py[cv]"
+## Debug Tools
 
-# Para visualización/debugging
-pip install camelot-py[plot]
-5. Validación y Calidad
-python# Verifica la calidad de extracción
-for i, table in enumerate(tables):
-    print(f"Tabla {i+1}:")
-    print(f"  Precisión: {table.parsing_report['accuracy']}%")
-    print(f"  Espacios en blanco: {table.parsing_report['whitespace']}%")
-    print(f"  Forma: {table.shape}")
-    
-    # Visualiza el área detectada (requiere matplotlib)
-    table.plot('table_detection.png')
-Ventajas de esta Solución:
-✅ Cada tabla se extrae como un DataFrame de pandas, integrándose perfectamente en flujos de trabajo ETL Camelot: PDF Table Extraction for Humans — Camelot 1.0.9 documentation
-✅ Métricas como precisión y espacios en blanco permiten descartar tablas mal extraídas sin revisión manual Camelot: PDF Table Extraction for Humans — Camelot 1.0.9 documentation
-✅ Maneja automáticamente páginas rotadas y PDFs multipágina con la sintaxis pages='1,4-10,20-end' Quickstart — Camelot 1.0.9 documentation
-✅ Exporta a múltiples formatos: CSV, JSON, Excel, HTML, SQLite
-Esta es la solución más profesional y robusta para tu caso de uso.
+### Visualize column detection:
+```bash
+python tools/visualize_columns.py
+```
+
+### Debug color detection:
+```bash
+python tools/debug_colors.py
+```
+
+### Debug single file:
+```bash
+python tools/debug_single_file.py
+```
+
+## Output Files
+
+After running the pipeline, you'll find:
+
+### Main Output
+- `output/table_data.csv` - Extracted table data (CSV format)
+- `output/table_data.xlsx` - Extracted table data (Excel format)
+
+### Debug Output
+- `output/sections/` - Extracted section images
+- `output/sections/debug/` - Original images and line detection
+- `output/sections/debug_header/` - Header detection visualization
+- `output/sections/debug_columns/` - Individual column images
+- `output/sections/visualizations/` - Column overlay visualizations
+
+## How It Works
+
+### 1. Section Extraction ([src/extract_section.py](src/extract_section.py))
+- Locates the target section in the PDF (e.g., section 6.1)
+- Removes headers and footers
+- Detects horizontal blue lines that divide content
+- Splits pages into individual row images
+
+### 2. Table Processing ([src/process_table.py](src/process_table.py))
+- Finds the header row automatically
+- Detects column positions using exact word matching
+- Divides each row image into columns
+- Extracts text using Tesseract OCR (Catalan + Spanish)
+- Merges continuation rows
+- Exports to CSV and Excel
+
+## Column Detection Algorithm
+
+The tool uses a sophisticated multi-word matching algorithm:
+
+1. **Exact Word Matching**: Matches complete words, not substrings
+2. **Combination Search**: Finds all possible combinations of OCR blocks
+3. **Vertical/Horizontal Detection**: Identifies if titles are stacked or inline
+4. **Best Group Selection**: Chooses the most compact and leftmost group
+5. **No Duplicates**: Prevents reusing OCR blocks for multiple columns
+
+## Troubleshooting
+
+### "PDF not found" error
+Place your PDF in `data/documento.pdf` or update the path in `main.py`
+
+### Poor OCR quality
+- Ensure Tesseract is installed with Catalan/Spanish language support
+- Check that section images in `output/sections/` are clear
+- Adjust DPI in extract_section.py (line 89): `mat = fitz.Matrix(2, 2)`
+
+### Columns not detected correctly
+- Check `output/sections/debug_header/header_detection.png`
+- Verify header text is clear in the first section
+- Adjust column matching tolerance in process_table.py
+
+### Empty or incorrect data
+- Check `output/sections/visualizations/` to verify column boundaries
+- Review `output/sections/debug_columns/` for individual column images
+- Ensure images are not too small or too large
+
+## Requirements
+
+- Python 3.8+
+- PyMuPDF (fitz) 1.23.8
+- Pillow 10.1.0
+- OpenCV 4.8.1.78
+- pytesseract 0.3.10
+- pandas 2.1.3
+- openpyxl 3.1.2
+- Tesseract OCR (system dependency)
+
+## License
+
+This project is provided as-is for PDF table extraction purposes.
+
+## Contributing
+
+This is a specialized tool for extracting tables from specific PDF formats.
+For questions or issues, please refer to the documentation in the `docs/` directory.
+
+## Version
+
+1.0.0 - Professional restructured version

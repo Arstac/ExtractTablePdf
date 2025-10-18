@@ -13,7 +13,7 @@ import numpy as np
 
 
 class TableProcessor:
-    def __init__(self, sections_dir="output_sections", output_file="table_data.csv", generate_visualizations=False):
+    def __init__(self, sections_dir="output/sections", output_file="output/table_data.csv", generate_visualizations=False):
         self.sections_dir = sections_dir
         self.output_file = output_file
         self.generate_visualizations = generate_visualizations
@@ -43,9 +43,63 @@ class TableProcessor:
         # Coordenadas X de las columnas (se detectarán automáticamente)
         self.column_x_positions = None
 
+    def is_image_mostly_blank(self, img_path, threshold=0.95):
+        """
+        Detecta si una imagen está mayormente en blanco o vacía.
+        Retorna True si más del threshold% de la imagen es fondo claro.
+        """
+        img = cv2.imread(img_path)
+        if img is None:
+            return False
+
+        # Convertir a escala de grises
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Contar píxeles claros (> 240 es casi blanco)
+        total_pixels = gray.shape[0] * gray.shape[1]
+        white_pixels = np.sum(gray > 240)
+        white_ratio = white_pixels / total_pixels
+
+        return white_ratio > threshold
+
+    def has_meaningful_content(self, img_path):
+        """
+        Verifica si una imagen tiene contenido significativo mediante OCR.
+        Retorna False si solo tiene texto basura o está vacía.
+        """
+        img = cv2.imread(img_path)
+        if img is None:
+            return False
+
+        # Extraer texto
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        text = pytesseract.image_to_string(gray, lang='cat+spa').strip()
+
+        # Si no hay texto, no tiene contenido
+        if len(text) < 5:
+            return False
+
+        # Detectar patrones de texto basura
+        text_lower = text.lower().replace('\n', ' ')
+        garbage_patterns = ['na a do ja', 'na do ja', 'anar', 'ona do']
+
+        # Si el texto es muy corto (menos de 50 caracteres), verificar patrones de basura
+        if len(text) < 50:
+            for pattern in garbage_patterns:
+                if pattern in text_lower:
+                    return False
+
+            # Si solo tiene palabras muy cortas y sin sentido
+            words = text_lower.split()
+            if len(words) <= 3 and all(len(w) <= 4 for w in words):
+                return False
+
+        return True
+
     def get_section_files(self):
         """
-        Obtiene todos los archivos de secciones ordenados.
+        Obtiene todos los archivos de secciones ordenados y filtrados.
+        Excluye archivos _top y archivos en blanco/con poco contenido.
         """
         pattern = os.path.join(self.sections_dir, "page_*_section_*.png")
         files = glob.glob(pattern)
@@ -62,7 +116,34 @@ class TableProcessor:
                 return (0, 0)
 
         files.sort(key=sort_key)
-        return files
+
+        # Filtrar archivos no válidos
+        valid_files = []
+        print("\n--- VALIDACIÓN DE IMÁGENES ---")
+
+        for f in files:
+            basename = os.path.basename(f)
+
+            # Filtro 1: Excluir archivos _top
+            if '_top' in basename:
+                print(f"  ❌ {basename}: Archivo _top (encabezado de página)")
+                continue
+
+            # Filtro 2: Excluir imágenes mayormente en blanco
+            if self.is_image_mostly_blank(f, threshold=0.97):
+                print(f"  ❌ {basename}: Imagen en blanco (>97% fondo claro)")
+                continue
+
+            # Filtro 3: Verificar contenido significativo
+            if not self.has_meaningful_content(f):
+                print(f"  ❌ {basename}: Sin contenido válido (texto basura o vacío)")
+                continue
+
+            valid_files.append(f)
+            print(f"  ✓ {basename}: Válido")
+
+        print(f"\nImágenes válidas: {len(valid_files)}/{len(files)}")
+        return valid_files
 
     def find_exact_word_match(self, word, block_word):
         """Verifica si una palabra hace match exacto (no subcadena)."""
@@ -154,10 +235,15 @@ class TableProcessor:
 
         return best_combination
 
-    def detect_header_columns(self, header_img, debug=False):
+    def detect_header_columns(self, header_img, debug=False, from_top_file=False):
         """
         Detecta las posiciones X de los títulos de columnas usando matching exacto.
         Retorna un diccionario con las coordenadas X de inicio de cada columna.
+
+        Args:
+            header_img: Imagen del encabezado
+            debug: Si True, genera imágenes de debug
+            from_top_file: Si True, busca en toda la imagen (no solo primeros 60px)
         """
         print("\n--- DETECCIÓN AUTOMÁTICA DE COLUMNAS ---")
 
@@ -176,8 +262,14 @@ class TableProcessor:
             output_type=pytesseract.Output.DICT
         )
 
-        # Crear lista de bloques SOLO de la zona del encabezado (primeros 60px de Y)
-        HEADER_Y_MAX = 60
+        # Si viene de archivo _top, buscar en toda la imagen; si no, solo en primeros 60px
+        if from_top_file:
+            HEADER_Y_MAX = height  # Toda la imagen
+            print(f"  ℹ️  Buscando en toda la imagen (archivo _top)")
+        else:
+            HEADER_Y_MAX = 60  # Solo primeros 60px
+
+        # Crear lista de bloques en la zona del encabezado
         all_blocks = []
         for i in range(len(ocr_data['text'])):
             word = ocr_data['text'][i].strip()
@@ -185,7 +277,7 @@ class TableProcessor:
                 conf = int(ocr_data['conf'][i])
                 y = ocr_data['top'][i]
 
-                # FILTRO: Solo bloques en los primeros 60px de Y
+                # FILTRO: Solo bloques en la zona de encabezado
                 if conf > 20 and y <= HEADER_Y_MAX:
                     all_blocks.append({
                         'word': word,
@@ -425,6 +517,105 @@ class TableProcessor:
         viz_file_borders = os.path.join(viz_dir, f"{basename}_columns_borders.png")
         cv2.imwrite(viz_file_borders, img_borders)
 
+    def is_header_row(self, row_data):
+        """
+        Detecta si una fila es un encabezado repetido (no datos reales).
+        Retorna True si la fila contiene títulos de columnas.
+        """
+        # Normalizar todos los textos de la fila
+        all_text = ' '.join([str(v).lower() for v in row_data.values()]).replace('\n', ' ')
+
+        # Normalizar caracteres
+        all_text = all_text.replace('ó', 'o').replace('à', 'a').replace('í', 'i')
+
+        # Contar cuántos títulos de columna aparecen en los datos
+        header_keywords = [
+            'tipus criteri',
+            'nom criteri',
+            'descripcio criteri',
+            'on incloure',
+            'doc a verificar per adjudicacio',
+            'doc a verificar execucio',
+            'condicionant'
+        ]
+
+        matches = 0
+        for keyword in header_keywords:
+            keyword_norm = keyword.replace('ó', 'o').replace('à', 'a').replace('í', 'i')
+            if keyword_norm in all_text:
+                matches += 1
+
+        # Si encuentra 4 o más títulos, es probablemente un encabezado repetido
+        if matches >= 4:
+            return True
+
+        return False
+
+    def detect_and_crop_header(self, img):
+        """
+        Detecta si hay un encabezado de tabla en la parte superior de la imagen.
+        Si lo encuentra, retorna la imagen recortada sin el encabezado.
+        Retorna: (imagen_recortada, tiene_encabezado)
+        """
+        height, width = img.shape[:2]
+
+        # Solo revisar los primeros 100 píxeles (zona donde aparecen los encabezados)
+        MAX_HEADER_ZONE = min(100, height)
+
+        if height < 50:
+            return img, False
+
+        # Extraer zona del encabezado
+        header_zone = img[:MAX_HEADER_ZONE, :]
+
+        # Convertir a escala de grises
+        if len(header_zone.shape) == 3:
+            gray = cv2.cvtColor(header_zone, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = header_zone
+
+        # Extraer texto de la zona del encabezado
+        text = pytesseract.image_to_string(gray, lang='cat+spa').lower()
+        text = text.replace('\n', ' ').replace('ó', 'o').replace('à', 'a').replace('í', 'i')
+
+        # Verificar si contiene títulos de columnas
+        header_keywords = ['tipus criteri', 'nom criteri', 'descripcio criteri']
+        matches = sum(1 for keyword in header_keywords if keyword in text)
+
+        if matches >= 2:
+            # Tiene encabezado, buscar la línea horizontal negra que lo separa
+            # Buscar en los primeros 100px una línea horizontal gruesa
+            search_zone = img[:MAX_HEADER_ZONE, :]
+            if len(search_zone.shape) == 3:
+                search_gray = cv2.cvtColor(search_zone, cv2.COLOR_BGR2GRAY)
+            else:
+                search_gray = search_zone
+
+            # Aplicar umbral para detectar líneas oscuras
+            _, binary = cv2.threshold(search_gray, 100, 255, cv2.THRESH_BINARY_INV)
+
+            # Proyección vertical para encontrar líneas horizontales
+            vertical_projection = np.sum(binary, axis=1)
+            max_projection = np.max(vertical_projection)
+
+            # Buscar la línea más prominente (que cubre al menos 70% del ancho)
+            min_line_width = width * 0.7
+
+            crop_y = MAX_HEADER_ZONE  # Por defecto, recortar en MAX_HEADER_ZONE
+
+            # Buscar desde arriba hacia abajo la primera línea prominente
+            for i in range(30, MAX_HEADER_ZONE):  # Empezar desde píxel 30 (después del texto)
+                if vertical_projection[i] >= min_line_width:
+                    # Encontrada línea horizontal, recortar justo debajo
+                    crop_y = i + 12  # +12 para dejar margen suficiente y evitar texto del encabezado
+                    break
+
+            cropped_img = img[crop_y:, :]
+            print(f"  📋 Encabezado detectado, recortando en Y={crop_y}px")
+            return cropped_img, True
+
+        return img, False
+
     def process_section(self, section_path, debug=False):
         """
         Procesa una sección (fila de tabla) y extrae los datos de todas las columnas.
@@ -435,6 +626,14 @@ class TableProcessor:
 
         if img is None:
             print(f"  Error: No se pudo leer {section_path}")
+            return None
+
+        # Detectar y recortar encabezado si existe
+        img, had_header = self.detect_and_crop_header(img)
+
+        # Si después de recortar la imagen es muy pequeña, omitir
+        if img.shape[0] < 20:
+            print(f"  ⚠️  Imagen muy pequeña después de recortar encabezado, se omitirá")
             return None
 
         # Dividir en columnas
@@ -464,12 +663,153 @@ class TableProcessor:
                 col_filename = f"{basename}_{col_name}.png"
                 cv2.imwrite(os.path.join(debug_dir, col_filename), col_img)
 
+        # Verificar si es un encabezado repetido (solo si no tenía encabezado que recortamos)
+        if not had_header and self.is_header_row(row_data):
+            print(f"  ⚠️  Fila detectada como encabezado repetido, se omitirá")
+            return None
+
         return row_data
+
+    def merge_continuation_rows(self, df):
+        """
+        Fusiona filas de continuación con la fila anterior.
+        Las filas sin tipus_criterio y nom_criteri son continuaciones
+        y su contenido debe agregarse a la fila anterior.
+        """
+        print("\n--- FUSIONANDO FILAS DE CONTINUACIÓN ---")
+
+        if df.empty:
+            return df
+
+        # Lista para almacenar índices de filas a eliminar
+        rows_to_remove = []
+
+        # Iterar desde la segunda fila
+        for idx in range(1, len(df)):
+            current_row = df.iloc[idx]
+
+            # Verificar si es una fila de continuación
+            # (tipus_criterio y nom_criteri vacíos o NaN)
+            tipus_empty = pd.isna(current_row['tipus_criterio']) or str(current_row['tipus_criterio']).strip() == ''
+            nom_empty = pd.isna(current_row['nom_criteri']) or str(current_row['nom_criteri']).strip() == ''
+
+            if tipus_empty and nom_empty:
+                # Es una fila de continuación, fusionar con la fila anterior
+                prev_idx = idx - 1
+
+                # Buscar la última fila principal (en caso de múltiples continuaciones)
+                while prev_idx in rows_to_remove and prev_idx > 0:
+                    prev_idx -= 1
+
+                print(f"  📎 Fusionando fila {idx} (source: {current_row['_source_file']}) con fila {prev_idx}")
+
+                # Concatenar contenido de cada columna (excepto tipus_criterio y nom_criteri)
+                for col in self.column_names[2:]:  # Saltar tipus_criterio y nom_criteri
+                    prev_value = df.at[prev_idx, col]
+                    curr_value = current_row[col]
+
+                    # Si ambos tienen contenido, concatenar con espacio
+                    if pd.notna(prev_value) and str(prev_value).strip() and \
+                       pd.notna(curr_value) and str(curr_value).strip():
+                        df.at[prev_idx, col] = str(prev_value) + ' ' + str(curr_value)
+                    # Si solo el actual tiene contenido, usar ese
+                    elif pd.notna(curr_value) and str(curr_value).strip():
+                        df.at[prev_idx, col] = curr_value
+
+                # Marcar esta fila para eliminar
+                rows_to_remove.append(idx)
+
+        # Eliminar filas de continuación
+        if rows_to_remove:
+            print(f"\n  ✓ Eliminando {len(rows_to_remove)} filas de continuación fusionadas")
+            df = df.drop(rows_to_remove).reset_index(drop=True)
+        else:
+            print("  ℹ️  No se encontraron filas de continuación")
+
+        return df
+
+    def extract_bottom_region(self, img, bottom_pixels=200):
+        """
+        Extrae la región inferior de una imagen.
+        Útil para buscar encabezados en archivos _top.
+        """
+        height = img.shape[0]
+        if height <= bottom_pixels:
+            return img
+
+        # Extraer los últimos N píxeles
+        return img[height - bottom_pixels:, :]
+
+    def find_header_in_top_files(self):
+        """
+        Busca el encabezado en archivos _top (parte inferior de las imágenes).
+        Se usa cuando no se encuentra en las secciones normales.
+        """
+        print("\n--- BUSCANDO ENCABEZADO EN ARCHIVOS _TOP ---")
+
+        pattern = os.path.join(self.sections_dir, "page_*_top.png")
+        top_files = glob.glob(pattern)
+
+        if not top_files:
+            print("  ⚠️  No se encontraron archivos _top")
+            return None
+
+        # Ordenar archivos
+        top_files.sort()
+
+        best_match = None
+        best_score = 0
+        best_region = None
+
+        for top_file in top_files[:3]:  # Revisar los primeros 3 archivos _top
+            img = cv2.imread(top_file)
+            if img is None:
+                continue
+
+            # Buscar en diferentes regiones de la parte inferior
+            # Probar 150px, 200px, 250px desde abajo
+            for bottom_height in [150, 200, 250]:
+                bottom_region = self.extract_bottom_region(img, bottom_height)
+
+                # Extraer texto con OCR
+                gray = cv2.cvtColor(bottom_region, cv2.COLOR_BGR2GRAY)
+                text = pytesseract.image_to_string(gray, lang='cat+spa').lower()
+
+                # Normalizar texto
+                text = text.replace('ó', 'o').replace('à', 'a').replace('\n', ' ')
+
+                # Contar cuántos títulos de columna aparecen
+                score = 0
+                for col_name, title in self.header_titles.items():
+                    title_normalized = title.lower().replace('ó', 'o').replace('à', 'a')
+                    if title_normalized in text:
+                        score += 1
+
+                if score > best_score:
+                    best_score = score
+                    best_match = top_file
+                    best_region = bottom_region
+
+            basename = os.path.basename(top_file)
+            print(f"  {basename}: {best_score}/{len(self.header_titles)} títulos encontrados")
+
+        if best_match and best_score >= len(self.header_titles) * 0.6:  # Al menos 60% de títulos
+            print(f"\n✓ Encabezado detectado en: {os.path.basename(best_match)} (región inferior)")
+
+            # Guardar la región del encabezado como archivo temporal
+            header_temp_path = os.path.join(self.sections_dir, "_header_from_top.png")
+            cv2.imwrite(header_temp_path, best_region)
+
+            return header_temp_path
+        else:
+            print(f"\n⚠️  No se encontró encabezado en archivos _top")
+            return None
 
     def find_header_section(self, section_files):
         """
         Encuentra la sección que contiene los encabezados de la tabla.
         Busca la que contenga más títulos de columnas.
+        Si no encuentra en secciones normales, busca en archivos _top.
         """
         print("\n--- BUSCANDO ENCABEZADO DE TABLA ---")
 
@@ -505,7 +845,13 @@ class TableProcessor:
             print(f"\n✓ Encabezado detectado: {os.path.basename(best_match)}")
             return best_match
         else:
-            print(f"\n⚠️  No se pudo detectar el encabezado automáticamente")
+            print(f"\n⚠️  No se pudo detectar el encabezado en secciones normales")
+
+            # Intentar buscar en archivos _top
+            header_from_top = self.find_header_in_top_files()
+            if header_from_top:
+                return header_from_top
+
             return None
 
     def process_all_sections(self, debug=False):
@@ -528,7 +874,15 @@ class TableProcessor:
 
         if header_file:
             header_img = cv2.imread(header_file)
-            self.column_x_positions = self.detect_header_columns(header_img, debug=debug)
+
+            # Verificar si el encabezado viene de un archivo _top
+            from_top_file = '_header_from_top' in header_file
+
+            self.column_x_positions = self.detect_header_columns(
+                header_img,
+                debug=debug,
+                from_top_file=from_top_file
+            )
 
             if self.column_x_positions:
                 print(f"\n✓ Posiciones de columnas detectadas:")
@@ -542,18 +896,22 @@ class TableProcessor:
             print("\n⚠️  No se encontró el encabezado")
             return None
 
-        # Paso 2: Procesar todas las secciones (excepto el encabezado)
+        # Paso 2: Procesar todas las secciones (incluyendo el encabezado si tiene datos debajo)
         all_rows = []
 
         for i, section_file in enumerate(section_files):
             basename = os.path.basename(section_file)
 
-            # Saltar el encabezado y secciones "_top"
-            if section_file == header_file or "_top" in basename:
-                print(f"\n[{i+1}/{len(section_files)}] Saltando: {basename} (encabezado o top)")
+            # Saltar secciones "_top" (pero NO saltar el encabezado, porque puede tener datos debajo)
+            if "_top" in basename:
+                print(f"\n[{i+1}/{len(section_files)}] Saltando: {basename} (archivo top)")
                 continue
 
             print(f"\nProcesando [{i+1}/{len(section_files)}]: {basename}")
+
+            # Si es el encabezado, indicarlo pero procesarlo igual (tiene datos debajo del encabezado)
+            if section_file == header_file:
+                print(f"  ℹ️  Esta imagen contiene el encabezado + datos debajo")
 
             row_data = self.process_section(section_file, debug=debug)
 
@@ -576,6 +934,9 @@ class TableProcessor:
         # Reordenar columnas
         column_order = self.column_names + ['_source_file']
         df = df[column_order]
+
+        # Fusionar filas de continuación
+        df = self.merge_continuation_rows(df)
 
         print("\n" + "="*60)
         print("RESULTADO")
@@ -606,8 +967,8 @@ class TableProcessor:
 
 def main():
     processor = TableProcessor(
-        sections_dir="output_sections",
-        output_file="table_data.csv",
+        sections_dir="output/sections",
+        output_file="output/table_data.csv",
         generate_visualizations=True  # Cambiar a False para desactivar visualizaciones
     )
 

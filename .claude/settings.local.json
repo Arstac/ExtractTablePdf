@@ -1,8 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(.venv/bin/python extract_section.py)",
-      "Bash(.venv/bin/pip install -r requirements.txt)"
+      "Bash(chmod +x main.py)",
+      "Bash(tree -L 2 -I '.venv|__pycache__|.git' --dirsfirst)",
+      "Bash(python -c \"import sys; sys.path.insert(0, ''src''); from extract_section import PDFSectionExtractor; from process_table import TableProcessor; print(''✓ Imports funcionan correctamente'')\")",
+      "Bash(python main.py --help)"
     ],
     "deny": [],
     "ask": []

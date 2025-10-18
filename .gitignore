@@ -4,10 +4,28 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
 venv/
 ENV/
-.venv
+env/
 
 # IDEs
 .vscode/
@@ -15,18 +33,37 @@ ENV/
 *.swp
 *.swo
 *~
+.DS_Store
+Thumbs.db
 
-# Archivos temporales
-*.pdf
+# Project specific - Output files
+output/
+output_sections/
+output_sections1/
+output_tables/
+debug_analysis/
+test_debug/
 *.csv
 *.xlsx
 *.xls
+*.json
+output_tables.json
+
+# Project specific - Data files (keep PDFs in data/ for reference)
+# Uncomment the line below if you don't want to commit PDFs
+# data/*.pdf
+
+# Temporary files
+*.tmp
+*.log
+*.png.bak
 temp/
 tmp/
 
-# Logs
-*.log
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
 
-# OS
-.DS_Store
-Thumbs.db
+# Test outputs
+test_*.png
+column_division_preview*.png
