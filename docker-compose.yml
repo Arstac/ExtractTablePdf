@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pdf-extraction-api
+    image: pdf-extraction-api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      # Application settings
+      - PYTHONUNBUFFERED=1
+      # Optional: Set log level
+      - LOG_LEVEL=info
+    volumes:
+      # Optional: Mount data directory for persistent storage
+      - ./data:/app/data:ro
+      # Optional: Mount output directory for debugging
+      # - ./output:/app/output
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    networks:
+      - pdf-extraction-network
+
+networks:
+  pdf-extraction-network:
+    driver: bridge

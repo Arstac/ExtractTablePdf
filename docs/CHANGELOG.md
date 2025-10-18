@@ -1,75 +1,5 @@
 # Changelog
 
-## [1.2.0] - 2025-10-18
-
-### Docker Support & Container Deployment
-
-#### Added
-- **Dockerfile**: Multi-stage Docker build optimized for production
-  - Based on Python 3.10-slim for minimal image size (~800MB)
-  - Includes Tesseract OCR with Catalan and Spanish language packs
-  - Non-root user (appuser) for security
-  - Health check configured (/health endpoint)
-  - Platform: linux/amd64 (Azure Container Apps compatible)
-  - Multi-stage build to reduce final image size
-- **docker-compose.yml**: Docker Compose configuration
-  - Service definition with resource limits (2 CPU, 2GB RAM)
-  - Health checks every 30s
-  - Network configuration
-  - Volume mounts for data and output (optional)
-  - Restart policy: unless-stopped
-- **.dockerignore**: Optimized to exclude unnecessary files
-  - Excludes development files, tests, tools
-  - Reduces build context size
-  - Faster builds
-- **docker-build.sh**: Helper script to build Docker image
-  - Platform specification (linux/amd64) for Azure
-  - Version and latest tagging
-  - Build progress display
-  - Image size reporting
-  - Usage instructions
-- **docker-run.sh**: Helper script to run Docker container locally
-  - Automatic image building if needed
-  - Container lifecycle management
-  - Health check and URL display
-  - Useful commands reference
-- **docs/DOCKER.md**: Complete Docker deployment guide (6+ pages)
-  - Quick start with Docker
-  - Manual Docker commands
-  - Azure Container Apps deployment (complete walkthrough)
-  - Azure Container Registry integration
-  - Configuration (env vars, resources, scaling)
-  - Monitoring and logging
-  - Troubleshooting guide
-  - Performance optimization
-  - Cost optimization strategies
-  - Security best practices
-
-#### Changed
-- **README.md**: Added Docker deployment section with quick start
-- **Project structure**: Added Docker-related files to root
-
-#### Features
-- **Production-ready containerization**:
-  - Multi-stage build for smaller image size
-  - Security hardening (non-root user, minimal dependencies)
-  - Health check endpoint integration
-  - Resource limits configured
-  - Uvicorn with 2 workers by default
-- **Azure Container Apps ready**:
-  - Platform linux/amd64 compatible
-  - ACR integration examples
-  - Autoscaling configuration (1-10 replicas)
-  - Environment variables support
-  - Scale-to-zero capability
-- **Easy deployment**:
-  - One-command build: `./docker-build.sh`
-  - One-command run: `./docker-run.sh`
-  - Docker Compose support: `docker-compose up -d`
-  - Helper scripts for common tasks
-
----
-
 ## [1.1.0] - 2025-10-18
 
 ### REST API con FastAPI
@@ -144,7 +74,7 @@
   - `USAGE.md`: Guía de uso
   - `VISUALIZACIONES.md`: Guía de visualizaciones
 - **.gitignore**: Archivo mejorado con exclusiones apropiadas
-- **run.sh**: Script bash para inicio rápido
+- **CHANGELOG.md**: Este archivo
 
 #### Changed
 - Rutas de salida actualizadas:
@@ -195,8 +125,7 @@ Si tenías el proyecto antiguo:
 #### Project Structure
 ```
 ExtractTablePdf/
-├── main.py                 # Main entry point (CLI)
-├── app.py                  # FastAPI REST API
+├── main.py                 # Main entry point
 ├── src/                    # Source code
 ├── tests/                  # Test scripts
 ├── tools/                  # Debug utilities

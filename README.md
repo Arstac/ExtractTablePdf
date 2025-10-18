@@ -263,6 +263,41 @@ Place your PDF in `data/documento.pdf` or update the path in `main.py`
 - Review `output/sections/debug_columns/` for individual column images
 - Ensure images are not too small or too large
 
+## Docker Deployment
+
+### Quick Start with Docker
+
+```bash
+# Build and run using helper scripts
+./docker-build.sh
+./docker-run.sh
+
+# Or use docker-compose
+docker-compose up -d
+```
+
+### Deploy to Azure Container Apps
+
+```bash
+# Build and push to Azure Container Registry
+az acr build --registry myregistry --image pdf-extraction-api:latest .
+
+# Deploy to Azure Container Apps
+az containerapp create \
+  --name pdf-extraction-api \
+  --resource-group mygroup \
+  --environment myenv \
+  --image myregistry.azurecr.io/pdf-extraction-api:latest \
+  --target-port 8000 \
+  --ingress external \
+  --cpu 2.0 \
+  --memory 4.0Gi
+```
+
+See [docs/DOCKER.md](docs/DOCKER.md) for complete Docker and Azure deployment guide.
+
+---
+
 ## Requirements
 
 - Python 3.8+
