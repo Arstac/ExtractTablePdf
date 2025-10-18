@@ -1,0 +1,78 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output files (not needed in container)
+output/
+output_sections/
+output_tables/
+*.csv
+*.xlsx
+*.json
+
+# Temporary files
+*.tmp
+*.log
+temp/
+tmp/
+
+# Test files
+test_*.png
+column_division_preview*.png
+
+# Documentation (not needed at runtime)
+docs/
+*.md
+!requirements.txt
+
+# Examples (not needed at runtime)
+examples/
+
+# Tests (not needed at runtime)
+tests/
+
+# Tools (not needed at runtime)
+tools/
+
+# Data files (will be uploaded via API)
+data/*.pdf
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Claude Code
+.claude/
